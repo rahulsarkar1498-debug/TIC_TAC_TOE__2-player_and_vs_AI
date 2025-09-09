@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Advanced Tic Tac Toe</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #1d2b64, #f8cdda);
+      font-family: Arial, sans-serif;
+    }
+
+    .game-container {
+      text-align: center;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 20px;
+      border-radius: 15px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+    }
+
+    h1 {
+      color: white;
+      margin-bottom: 15px;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      grid-template-rows: repeat(3, 100px);
+      gap: 10px;
+      margin: 20px auto;
+    }
+
+    .cell {
+      background: white;
+      border-radius: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 2.5rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .cell:hover {
+      background: #d6d6d6;
+    }
+
+    .cell.winner {
+      background: #4caf50 !important;
+      color: white;
+    }
+
+    .controls {
+      margin-top: 15px;
+    }
+
+    button {
+      padding: 10px 15px;
+      margin: 5px;
+      border: none;
+      border-radius: 5px;
+      background: #ff5722;
+      color: white;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: #e64a19;
+    }
+
+    .status {
+      margin: 10px 0;
+      font-size: 1.2rem;
+      color: white;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>Tic Tac Toe</h1>
+    <div class="status">Player X's Turn</div>
+    <div class="board" id="board"></div>
+    <div class="controls">
+      <button onclick="resetGame()">Restart</button>
+      <button onclick="toggleMode()">Switch to AI Mode</button>
+    </div>
+  </div>
+
+  <script>
+    const boardElement = document.getElementById("board");
+    const statusElement = document.querySelector(".status");
+
+    let board = Array(9).fill(null);
+    let currentPlayer = "X";
+    let gameActive = true;
+    let aiMode = false;
+
+    const winningCombos = [
+      [0,1,2],[3,4,5],[6,7,8],
+      [0,3,6],[1,4,7],[2,5,8],
+      [0,4,8],[2,4,6]
+    ];
+
+    function createBoard() {
+      boardElement.innerHTML = "";
+      board.forEach((cell, index) => {
+        const cellElement = document.createElement("div");
+        cellElement.classList.add("cell");
+        cellElement.dataset.index = index;
+        cellElement.addEventListener("click", handleCellClick);
+        cellElement.textContent = cell || "";
+        boardElement.appendChild(cellElement);
+      });
+    }
+
+    function handleCellClick(e) {
+      const index = e.target.dataset.index;
+
+      if (!gameActive || board[index]) return;
+
+      board[index] = currentPlayer;
+      createBoard();
+
+      if (checkWinner()) {
+        statusElement.textContent = `Player ${currentPlayer} Wins! 🎉`;
+        gameActive = false;
+        highlightWinner();
+        return;
+      }
+
+      if (!board.includes(null)) {
+        statusElement.textContent = "It's a Draw 🤝";
+        gameActive = false;
+        return;
+      }
+
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+      statusElement.textContent = `Player ${currentPlayer}'s Turn`;
+
+      if (aiMode && currentPlayer === "O") {
+        setTimeout(aiMove, 500);
+      }
+    }
+
+    function checkWinner() {
+      return winningCombos.some(combo => {
+        return combo.every(index => board[index] === currentPlayer);
+      });
+    }
+
+    function highlightWinner() {
+      winningCombos.forEach(combo => {
+        if (combo.every(index => board[index] === currentPlayer)) {
+          combo.forEach(index => {
+            document.querySelectorAll(".cell")[index].classList.add("winner");
+          });
+        }
+      });
+    }
+
+    function resetGame() {
+      board = Array(9).fill(null);
+      currentPlayer = "X";
+      gameActive = true;
+      statusElement.textContent = `Player ${currentPlayer}'s Turn`;
+      createBoard();
+    }
+
+    function toggleMode() {
+      aiMode = !aiMode;
+      resetGame();
+      const btn = document.querySelector(".controls button:nth-child(2)");
+      btn.textContent = aiMode ? "Switch to 2-Player Mode" : "Switch to AI Mode";
+    }
+
+    function aiMove() {
+      let bestScore = -Infinity;
+      let move;
+      for (let i = 0; i < 9; i++) {
+        if (board[i] === null) {
+          board[i] = "O";
+          let score = minimax(board, 0, false);
+          board[i] = null;
+          if (score > bestScore) {
+            bestScore = score;
+            move = i;
+          }
+        }
+      }
+      board[move] = "O";
+      createBoard();
+
+      if (checkWinner()) {
+        statusElement.textContent = "AI Wins 🤖";
+        gameActive = false;
+        highlightWinner();
+        return;
+      }
+
+      if (!board.includes(null)) {
+        statusElement.textContent = "It's a Draw 🤝";
+        gameActive = false;
+        return;
+      }
+
+      currentPlayer = "X";
+      statusElement.textContent = `Player ${currentPlayer}'s Turn`;
+    }
+
+    function minimax(board, depth, isMaximizing) {
+      if (winningCombos.some(combo => combo.every(i => board[i] === "O"))) return 10 - depth;
+      if (winningCombos.some(combo => combo.every(i => board[i] === "X"))) return depth - 10;
+      if (!board.includes(null)) return 0;
+
+      if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === null) {
+            board[i] = "O";
+            let score = minimax(board, depth + 1, false);
+            board[i] = null;
+            bestScore = Math.max(score, bestScore);
+          }
+        }
+        return bestScore;
+      } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < 9; i++) {
+          if (board[i] === null) {
+            board[i] = "X";
+            let score = minimax(board, depth + 1, true);
+            board[i] = null;
+            bestScore = Math.min(score, bestScore);
+          }
+        }
+        return bestScore;
+      }
+    }
+
+    createBoard();
+  </script>
+</body>
+</html>
